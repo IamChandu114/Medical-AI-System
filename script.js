@@ -1,28 +1,21 @@
-/* =========================================================
-   AI SMART HEALTHCARE – FULL SCRIPT
-   ========================================================= */
-
-/* 🔥 CHANGE THIS ONLY IF BACKEND URL CHANGES */
-const API_BASE = "https://medical-ai-system.onrender.com";
-
-/* --------------------------------------------------------- */
-let chart = null;
+const API_BASE = "http://127.0.0.1:8000";
+let chart;
 let latestReport = null;
 
-const diseases = ["diabetes", "heart", "kidney", "liver", "thyroid"];
+const diseases = ["diabetes","heart","kidney","liver","thyroid"];
 
-/* --------------------------------------------------------- */
-/* ON LOAD */
+// Load patient history on page load
 window.onload = () => {
     renderHistory();
 };
 
-/* --------------------------------------------------------- */
-/* PREDICT */
+// ----------------------
+// PREDICT
+// ----------------------
 function predict() {
 
     const data = {
-        name: document.getElementById("patientName")?.value || "Anonymous",
+        name: document.getElementById("patientName").value || "Anonymous",
         pregnancies: +document.getElementById("pregnancies").value,
         glucose: +document.getElementById("glucose").value,
         bloodPressure: +document.getElementById("bloodPressure").value,
@@ -34,23 +27,22 @@ function predict() {
     };
 
     fetch(`${API_BASE}/predict`, {
+
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data)
     })
     .then(res => {
-        if (!res.ok) throw new Error("API Error");
+        if(!res.ok) throw new Error("API Error");
         return res.json();
     })
     .then(result => renderDashboard(result, data))
-    .catch(err => {
-        console.error(err);
-        alert("❌ Backend not connected");
-    });
+    .catch(() => alert("❌ Backend not connected"));
 }
 
-/* --------------------------------------------------------- */
-/* DASHBOARD */
+// ----------------------
+// DASHBOARD
+// ----------------------
 function renderDashboard(result, data) {
 
     let riskText = "🧬 Disease Risk Assessment\n";
@@ -63,24 +55,19 @@ function renderDashboard(result, data) {
 
     document.getElementById("doctorAdvice").innerText =
 `👨‍⚕️ Doctor Recommendation
-${anyRisk
-    ? "Medical supervision and lifestyle changes are strongly advised."
-    : "Patient condition stable. Preventive care advised."
-}`;
+${anyRisk ? "Medical supervision and lifestyle changes are strongly advised." : "Patient condition stable. Preventive care advised."}`;
 
     document.getElementById("precautions").innerText =
 `🛡️ Precautions
 ${anyRisk
-    ? "• Avoid sugar & processed food\n• Exercise daily\n• Avoid smoking & alcohol\n• Monitor vitals"
-    : "• Balanced diet\n• Regular exercise\n• Annual checkups"
-}`;
+? "• Avoid sugar & processed food\n• Exercise daily\n• Avoid smoking & alcohol\n• Monitor vitals"
+: "• Balanced diet\n• Regular exercise\n• Annual checkups"}`;
 
     document.getElementById("tests").innerText =
 `🧪 Recommended Tests
 ${anyRisk
-    ? "HbA1c, Lipid Profile, BP Monitoring, Kidney Function Test, Thyroid Panel"
-    : "Annual Blood Sugar Screening"
-}`;
+? "HbA1c, Lipid Profile, BP Monitoring, Kidney Function Test, Thyroid Panel"
+: "Annual Blood Sugar Screening"}`;
 
     drawChart(result);
     animateMeters(result);
@@ -90,15 +77,13 @@ ${anyRisk
     saveHistory(data, result);
 }
 
-/* --------------------------------------------------------- */
-/* CHART */
+// ----------------------
+// CHART
+// ----------------------
 function drawChart(result) {
+    const values = diseases.map(d => result[d] ? rand(70,90) : rand(20,40));
 
-    const values = diseases.map(d =>
-        result[d] ? rand(70, 90) : rand(20, 40)
-    );
-
-    if (chart) chart.destroy();
+    if(chart) chart.destroy();
 
     chart = new Chart(document.getElementById("riskChart"), {
         type: "bar",
@@ -107,7 +92,7 @@ function drawChart(result) {
             datasets: [{
                 label: "Risk Confidence (%)",
                 data: values,
-                backgroundColor: values.map((v, i) =>
+                backgroundColor: values.map((v,i) =>
                     result[diseases[i]] ? "#ff3d3d" : "#00bfa6"
                 ),
                 borderRadius: 10
@@ -122,32 +107,31 @@ function drawChart(result) {
     });
 }
 
-/* --------------------------------------------------------- */
-/* METERS */
-function animateMeters(result) {
-
-    const meterMap = {
-        diabetes: [80, 20],
-        heart: [75, 25],
-        kidney: [70, 30],
-        liver: [65, 25],
-        thyroid: [60, 20]
+// ----------------------
+// METERS
+// ----------------------
+function animateMeters(result){
+    const map = {
+        diabetes: [80,20],
+        heart: [75,25],
+        kidney: [70,30],
+        liver: [65,25],
+        thyroid: [60,20]
     };
 
     diseases.forEach(d => {
         animateMeter(
             `${d}Meter`,
             `${d}Percent`,
-            result[d] ? meterMap[d][0] : meterMap[d][1],
+            result[d] ? map[d][0] : map[d][1],
             result[d]
         );
     });
 }
 
-function animateMeter(circleId, percentId, value, danger) {
-
+function animateMeter(circleId, percentId, value, danger){
     const circle = document.getElementById(circleId);
-    if (!circle) return;
+    if(!circle) return;
 
     const radius = circle.r.baseVal.value;
     const circumference = 2 * Math.PI * radius;
@@ -163,46 +147,38 @@ function animateMeter(circleId, percentId, value, danger) {
     }, 100);
 }
 
-/* --------------------------------------------------------- */
-/* HISTORY */
-function saveHistory(data, result) {
-
+// ----------------------
+// HISTORY
+// ----------------------
+function saveHistory(data, result){
     const history = JSON.parse(localStorage.getItem("patientHistory") || "[]");
-    history.unshift({
-        time: new Date().toLocaleString(),
-        data,
-        result
-    });
-
-    if (history.length > 10) history.pop();
-
+    history.unshift({ time: new Date().toLocaleString(), data, result });
+    if(history.length > 10) history.pop();
     localStorage.setItem("patientHistory", JSON.stringify(history));
     renderHistory();
 }
 
-function renderHistory() {
-
+function renderHistory(){
     const ul = document.getElementById("patientHistory");
-    if (!ul) return;
+    if(!ul) return;
 
     ul.innerHTML = "";
-
     const history = JSON.parse(localStorage.getItem("patientHistory") || "[]");
 
     history.forEach(h => {
         const li = document.createElement("li");
-        const risks =
-            diseases.filter(d => h.result[d]).join(", ") || "No High Risk";
+        const risks = diseases.filter(d => h.result[d]).join(", ") || "No High Risk";
         li.textContent = `${h.time} → ${h.data.name}: ${risks}`;
         ul.appendChild(li);
     });
 }
 
-/* --------------------------------------------------------- */
-/* PDF REPORT */
-async function downloadReport() {
+// ----------------------
+// PDF REPORT
+// ----------------------
+async function downloadReport(){
 
-    if (!latestReport) {
+    if(!latestReport){
         alert("⚠ Please generate prediction first");
         return;
     }
@@ -217,37 +193,27 @@ async function downloadReport() {
     y += 10;
 
     doc.setFontSize(12);
-    doc.text(`Patient: ${latestReport.data.name}`, 14, y); y += 6;
-    doc.text(`Age: ${latestReport.data.age}`, 14, y); y += 6;
-    doc.text(`Date: ${new Date().toLocaleString()}`, 14, y); y += 10;
+    doc.text(`Patient: ${latestReport.data.name}`, 14, y); y+=6;
+    doc.text(`Age: ${latestReport.data.age}`, 14, y); y+=6;
+    doc.text(`Date: ${new Date().toLocaleString()}`, 14, y); y+=10;
 
-    doc.text("Disease Assessment:", 14, y); y += 6;
-
-    diseases.forEach(d => {
-        doc.text(
-            `${capitalize(d)}: ${latestReport.result[d] ? "High Risk" : "Low Risk"}`,
-            14, y
-        );
-        y += 6;
+    doc.text("Disease Assessment:", 14, y); y+=6;
+    diseases.forEach(d=>{
+        doc.text(`${capitalize(d)}: ${latestReport.result[d]?"High Risk":"Low Risk"}`,14,y);
+        y+=6;
     });
 
-    y += 6;
-    doc.text("AI Explanation:", 14, y); y += 6;
-
-    latestReport.result.explanation.forEach(e => {
-        doc.text(`• ${e}`, 14, y);
-        y += 6;
+    y+=6;
+    doc.text("AI Explanation:",14,y); y+=6;
+    latestReport.result.explanation.forEach(e=>{
+        doc.text(`• ${e}`,14,y);
+        y+=6;
     });
 
-    doc.save(`Health_Report_${latestReport.data.name.replace(/\s+/g, "_")}.pdf`);
+    doc.save(`Health_Report_${latestReport.data.name.replace(/\s+/g,"_")}.pdf`);
 }
 
-/* --------------------------------------------------------- */
-/* HELPERS */
-function capitalize(str) {
-    return str.charAt(0).toUpperCase() + str.slice(1);
-}
+// ----------------------
+function capitalize(str){return str[0].toUpperCase()+str.slice(1);}
+function rand(min,max){return Math.floor(Math.random()*(max-min+1))+min;}
 
-function rand(min, max) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-}
